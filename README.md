@@ -1,66 +1,31 @@
-## Foundry
+## Escrow Agree 
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+**Decentralized Escrow Service**
 
-Foundry consists of:
+### Basic V1:
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+-   **Escrow Creation**: Buyer locks funds into escrow contract and specifies a seller and arbitrator (will be kept as a simple address for now).
+-   **Comfirmation**: Buyer releases funds to the seller if the transaction is successful.
+-   **Dispute**: Either party can flag a dispute.
+-   **Mock Arbitration**: Arbitrator address resolves dispute by calling a function (release funds to buyer or seller). Will use random outcome to simulate decision for V1.
 
-## Documentation
+### How it'll work
 
-https://book.getfoundry.sh/
+1. **Escrow Creation** - buyer creates an escrow by caling `createEscrow` with seller's address, arbitrator's address, and amount in msg.value.
+2. **Releasing Funds** - buyer can call `releaseFunds` to transfer funds to the seller if no disputes are flagged.
+3. **Raising a Dispute** - either party can call `raiseDispute` which will pause the transaction and move to a dispute state.
+4. **Mock Arbitration** - arbitrator resolves disputes by calling `resolveDispute`. A `releaseToSeller` bool will determine who gets the funds.
 
-## Usage
+### V2 Ideas
 
-### Build
+-   **Timeout Mechanism**: Automatically refund the funds if the buyer doesn't act in a set amount of time.
+-   **Oracles**: Verify external conditions (courier API?).
+-   **Off-chain Agreements for Legal Enforceability**: hashed documents stored on IPFS.
+-   **Actual Arbitration**: Implement Kleros - a blockchain dispute resolution layer.
+-   **Decentralised Identity System**: Verify users to increase credibility.
+-   **Multi-Sig Escrow**: Hold funds in a milti-sig wallet requiring two of three parties to approve fund release.
+-   **Fees/Monetisation**: Charge a percentage of escrowed amount or offer tiered services for premium arbitration options.
 
-```shell
-$ forge build
-```
 
-### Test
 
-```shell
-$ forge test
-```
 
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
