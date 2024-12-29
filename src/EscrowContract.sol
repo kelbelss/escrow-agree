@@ -27,6 +27,7 @@ contract EscrowContract {
     event EscrowCreated(uint256 escrowId, address buyer, address seller, uint256 amount);
     event FundsReleased(uint256 escrowId, address recipient);
     event DisputeRaised(uint256 escrowId);
+    event DisputeResolved(uint256 escrowId, address recipient);
 
     // modifiers - onlyBuyer, onlyParticipant, onlyArbitrator
     modifier onlyBuyer(uint256 escrowId) {
@@ -92,5 +93,18 @@ contract EscrowContract {
 
     // function resolveDispute
 
-    function resolveDispute(uint256 escrowId, bool releaseToSeller) external onlyArbitrator(escrowId) {}
+    function resolveDispute(uint256 escrowId, bool releaseToSeller) external onlyArbitrator(escrowId) {
+        Escrow storage escrow = escrows[escrowId];
+        require(escrow.status == EscrowStatus.Disputed, "Escrow not in dispute");
+
+        escrow.status = EscrowStatus.Resolved;
+
+        if (releaseToSeller) {
+            escrow.seller.transfer(escrow.amount);
+            emit DisputeResolved(escrowId, escrow.seller);
+        } else {
+            escrow.buyer.transfer(escrow.amount);
+            emit DisputeResolved(escrowId, escrow.buyer);
+        }
+    }
 }
