@@ -25,10 +25,26 @@ contract EscrowContract {
 
     // events
     event EscrowCreated(uint256 escrowId, address buyer, address seller, uint256 amount);
+    event FundsReleased(uint256 escrowId, address recipient);
+    event DisputeRaised(uint256 escrowId);
 
     // modifiers - onlyBuyer, onlyParticipant, onlyArbitrator
     modifier onlyBuyer(uint256 escrowId) {
         require(msg.sender == escrows[escrowId].buyer, "Only buyer can call this function");
+        _;
+    }
+
+    modifier onlyParticipant(uint256 escrowId) {
+        Escrow memory escrow = escrows[escrowId];
+        require(
+            msg.sender == escrow.buyer || msg.sender == escrow.seller || msg.sender == escrow.arbitrator,
+            "Not authorized"
+        );
+        _;
+    }
+
+    modifier onlyArbitrator(uint256 escrowId) {
+        require(msg.sender == escrows[escrowId].arbitrator, "Only arbitrator can call this function");
         _;
     }
 
@@ -55,9 +71,26 @@ contract EscrowContract {
 
     function releaseFunds(uint256 escrowId) external onlyBuyer(escrowId) {
         Escrow storage escrow = escrows[escrowId];
+        require(escrow.status == EscrowStatus.Pending, "Escrow not in a releasable state");
+
+        escrow.status = EscrowStatus.Completed;
+        escrow.seller.transfer(escrow.amount);
+
+        emit FundsReleased(escrowId, escrow.seller);
     }
 
     // function raiseDispute
 
+    function raiseDispute(uint256 escrowId) external onlyParticipant(escrowId) {
+        Escrow storage escrow = escrows[escrowId];
+        require(escrow.status == EscrowStatus.Pending, "Escrow not disputable");
+
+        escrow.status = EscrowStatus.Disputed;
+
+        emit DisputeRaised(escrowId);
+    }
+
     // function resolveDispute
+
+    function resolveDispute(uint256 escrowId, bool releaseToSeller) external onlyArbitrator(escrowId) {}
 }
