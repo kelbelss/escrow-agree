@@ -51,8 +51,6 @@ contract EscrowContract {
 
     // functions
 
-    // createEscrow
-
     function createEscrow(address payable seller, address arbitrator) external payable {
         require(msg.value > 0, "Amount being escrowed must be larger than 0");
 
@@ -68,8 +66,6 @@ contract EscrowContract {
         emit EscrowCreated(escrowId, msg.sender, seller, msg.value);
     }
 
-    // function releaseFunds
-
     function releaseFunds(uint256 escrowId) external onlyBuyer(escrowId) {
         Escrow storage escrow = escrows[escrowId];
         require(escrow.status == EscrowStatus.Pending, "Escrow not in a releasable state");
@@ -80,8 +76,6 @@ contract EscrowContract {
         emit FundsReleased(escrowId, escrow.seller);
     }
 
-    // function raiseDispute
-
     function raiseDispute(uint256 escrowId) external onlyParticipant(escrowId) {
         Escrow storage escrow = escrows[escrowId];
         require(escrow.status == EscrowStatus.Pending, "Escrow not disputable");
@@ -90,8 +84,6 @@ contract EscrowContract {
 
         emit DisputeRaised(escrowId);
     }
-
-    // function resolveDispute
 
     function resolveDispute(uint256 escrowId, bool releaseToSeller) external onlyArbitrator(escrowId) {
         Escrow storage escrow = escrows[escrowId];
