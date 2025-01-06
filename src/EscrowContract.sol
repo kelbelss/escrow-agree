@@ -75,7 +75,7 @@ contract EscrowContract {
         //     msg.sender == escrow.buyer || msg.sender == escrow.seller || msg.sender == escrow.arbitrator,
         //     "Not authorized"
         // );
-        if (msg.sender != escrow.buyer || msg.sender != escrow.seller || msg.sender != escrow.arbitrator) {
+        if (msg.sender != escrow.buyer && msg.sender != escrow.seller && msg.sender != escrow.arbitrator) {
             revert EscrowContract__NotAuthorised();
         }
         _;
@@ -98,7 +98,7 @@ contract EscrowContract {
     /*//////////////////////////////////////////////////////////////
                               MAIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-    function createEscrow(address payable seller, address arbitrator) external payable {
+    function createEscrow(address payable seller, address arbitrator) external payable returns (uint256) {
         // require(msg.value > 0, "Amount being escrowed must be larger than 0");
         if (msg.value < 0) {
             revert EscrowContract__InsufficientAmount();
@@ -114,6 +114,7 @@ contract EscrowContract {
         });
 
         emit EscrowCreated(escrowId, msg.sender, seller, msg.value);
+        return escrowId;
     }
 
     function releaseFunds(uint256 escrowId) external onlyBuyer(escrowId) {
