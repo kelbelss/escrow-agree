@@ -13,26 +13,44 @@ contract TestEscrowContract is Test {
 
     EscrowContract escrowContract;
 
-    address BUYER = makeAddr("buyer");
-    address SELLER = makeAddr("seller");
-    address ARBITRATOR = makeAddr("arbitrator");
+    address payable BUYER = payable(makeAddr("buyer"));
+    address payable SELLER = payable(makeAddr("seller"));
+    address payable ARBITRATOR = payable(makeAddr("arbitrator"));
 
     function setUp() public {
         vm.prank(BUYER);
-        escrowContract = EscrowContract();
+        escrowContract = new EscrowContract();
 
         // give buyer funds - 10 ETH
         deal(BUYER, 10e18);
     }
 
     function test_buyer_funds() public {
-        assertEq(escrowContract.balanceOf(BUYER), 10e18);
+        assertEq(address(BUYER).balance, 10e18);
     }
 
     // fail/error, success, event - consider checking enum status changes
 
     // TEST CreateEscrow(address payable seller, address arbitrator)
-    function test_createEscrow_success() public {} // check struct
+    function test_createEscrow_success() public {
+        vm.prank(BUYER);
+        uint256 id = escrowContract.createEscrow{value: 1 ether}({seller: SELLER, arbitrator: ARBITRATOR});
+
+        (
+            address payable buyer,
+            address payable seller,
+            address arbitrator,
+            uint256 amount,
+            EscrowContract.EscrowStatus status
+        ) = escrowContract.escrows(id);
+
+        assertEq(buyer, BUYER, "Buyer address not set correctly");
+        assertEq(seller, SELLER, "Seller address not set correctly");
+        assertEq(arbitrator, ARBITRATOR, "Arbitrator address not set correctly");
+        assertEq(amount, 1 ether, "Value incorrectly saved");
+        assertEq(uint8(status), uint8(EscrowContract.EscrowStatus.Pending), "Escrow status wrong");
+    }
+
     function test_createEscrow_fail_InsufficientAmount() public {}
     function test_event_createEscrow_EscrowCreated() public {}
 
