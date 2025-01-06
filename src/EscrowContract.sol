@@ -1,8 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.26;
 
+/**
+ * @title Escrow Contract
+ * @author Kelly Smulian
+ * @notice This contract allows buyers to lock funds, and only release funds to the seller if the transaction is successful.
+ */
 contract EscrowContract {
-    // enum
+    /*//////////////////////////////////////////////////////////////
+                                ENUMS
+    //////////////////////////////////////////////////////////////*/
     enum EscrowStatus {
         Pending,
         Completed,
@@ -10,7 +17,13 @@ contract EscrowContract {
         Resolved
     }
 
-    // struct
+    /*//////////////////////////////////////////////////////////////
+                                 STRUCTS
+    //////////////////////////////////////////////////////////////*/
+    /**
+     * @notice Struct to store information about each Escrow created
+     * @dev Used in the escrows mapping
+     */
     struct Escrow {
         address payable buyer;
         address payable seller;
@@ -19,40 +32,77 @@ contract EscrowContract {
         EscrowStatus status;
     }
 
-    // variables and mappings
+    /*//////////////////////////////////////////////////////////////
+                            STATE VARIABLES
+    //////////////////////////////////////////////////////////////*/
     uint256 public escrowCount;
     mapping(uint256 id => Escrow) public escrows;
 
-    // events
+    /*//////////////////////////////////////////////////////////////
+                                 EVENTS
+    //////////////////////////////////////////////////////////////*/
     event EscrowCreated(uint256 escrowId, address buyer, address seller, uint256 amount);
     event FundsReleased(uint256 escrowId, address recipient);
     event DisputeRaised(uint256 escrowId);
     event DisputeResolved(uint256 escrowId, address recipient);
 
+    /*//////////////////////////////////////////////////////////////
+                                 ERRORS
+    //////////////////////////////////////////////////////////////*/
+    error EscrowContract__OnlyBuyerCanCall();
+    error EscrowContract__NotAuthorised();
+    error EscrowContract__OnlyArbitratorCanCall();
+    error EscrowContract__InsufficientAmount();
+    error EscrowContract__NotInAReleasableState();
+    error EscrowContract__NotDisputable();
+    error EscrowContract__NotInDispute();
+
+    /*//////////////////////////////////////////////////////////////
+                                MODIFIERS
+    //////////////////////////////////////////////////////////////*/
     // modifiers - onlyBuyer, onlyParticipant, onlyArbitrator
     modifier onlyBuyer(uint256 escrowId) {
-        require(msg.sender == escrows[escrowId].buyer, "Only buyer can call this function");
+        if (msg.sender != escrows[escrowId].buyer) {
+            revert EscrowContract__OnlyBuyerCanCall();
+        }
+
         _;
     }
 
     modifier onlyParticipant(uint256 escrowId) {
         Escrow memory escrow = escrows[escrowId];
-        require(
-            msg.sender == escrow.buyer || msg.sender == escrow.seller || msg.sender == escrow.arbitrator,
-            "Not authorized"
-        );
+        // require(
+        //     msg.sender == escrow.buyer || msg.sender == escrow.seller || msg.sender == escrow.arbitrator,
+        //     "Not authorized"
+        // );
+        if (msg.sender != escrow.buyer || msg.sender != escrow.seller || msg.sender != escrow.arbitrator) {
+            revert EscrowContract__NotAuthorised();
+        }
         _;
     }
 
     modifier onlyArbitrator(uint256 escrowId) {
-        require(msg.sender == escrows[escrowId].arbitrator, "Only arbitrator can call this function");
+        // require(msg.sender == escrows[escrowId].arbitrator, "Only arbitrator can call this function");
+
+        if (msg.sender != escrows[escrowId].arbitrator) {
+            revert EscrowContract__OnlyArbitratorCanCall();
+        }
         _;
     }
 
-    // functions
+    /*//////////////////////////////////////////////////////////////
+                               CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
+    constructor() {}
 
+    /*//////////////////////////////////////////////////////////////
+                              MAIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
     function createEscrow(address payable seller, address arbitrator) external payable {
-        require(msg.value > 0, "Amount being escrowed must be larger than 0");
+        // require(msg.value > 0, "Amount being escrowed must be larger than 0");
+        if (msg.value < 0) {
+            revert EscrowContract__InsufficientAmount();
+        }
 
         uint256 escrowId = escrowCount++;
         escrows[escrowId] = Escrow({
@@ -68,7 +118,11 @@ contract EscrowContract {
 
     function releaseFunds(uint256 escrowId) external onlyBuyer(escrowId) {
         Escrow storage escrow = escrows[escrowId];
-        require(escrow.status == EscrowStatus.Pending, "Escrow not in a releasable state");
+        // require(escrow.status == EscrowStatus.Pending, "Escrow not in a releasable state");
+
+        if (escrow.status != EscrowStatus.Pending) {
+            revert EscrowContract__NotInAReleasableState();
+        }
 
         escrow.status = EscrowStatus.Completed;
         escrow.seller.transfer(escrow.amount);
@@ -78,7 +132,11 @@ contract EscrowContract {
 
     function raiseDispute(uint256 escrowId) external onlyParticipant(escrowId) {
         Escrow storage escrow = escrows[escrowId];
-        require(escrow.status == EscrowStatus.Pending, "Escrow not disputable");
+        // require(escrow.status == EscrowStatus.Pending, "Escrow not disputable");
+
+        if (escrow.status != EscrowStatus.Pending) {
+            revert EscrowContract__NotDisputable();
+        }
 
         escrow.status = EscrowStatus.Disputed;
 
@@ -87,7 +145,11 @@ contract EscrowContract {
 
     function resolveDispute(uint256 escrowId, bool releaseToSeller) external onlyArbitrator(escrowId) {
         Escrow storage escrow = escrows[escrowId];
-        require(escrow.status == EscrowStatus.Disputed, "Escrow not in dispute");
+        // require(escrow.status == EscrowStatus.Disputed, "Escrow not in dispute");
+
+        if (escrow.status != EscrowStatus.Disputed) {
+            revert EscrowContract__NotInDispute();
+        }
 
         escrow.status = EscrowStatus.Resolved;
 
