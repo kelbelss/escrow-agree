@@ -16,6 +16,7 @@ contract TestEscrowContract is Test {
     address payable BUYER = payable(makeAddr("buyer"));
     address payable SELLER = payable(makeAddr("seller"));
     address payable ARBITRATOR = payable(makeAddr("arbitrator"));
+    address RANDOM = makeAddr("random");
 
     function setUp() public {
         vm.prank(BUYER);
@@ -114,10 +115,67 @@ contract TestEscrowContract is Test {
     }
 
     // TEST raiseDispute(uint256 escrowId) onlyParticipant
-    function test_raiseDispute_success() public {}
-    function test_raiseDispute_fail_NotAuthorised() public {}
-    function test_raiseDispute_fail_NotDisputable() public {}
-    function test_event_raiseDispute_DisputeRaised() public {}
+    function test_raiseDispute_success() public {
+        vm.prank(BUYER);
+        uint256 id = escrowContract.createEscrow{value: 1e18}({seller: SELLER, arbitrator: ARBITRATOR});
+        vm.prank(SELLER);
+        escrowContract.raiseDispute(id);
+
+        (
+            address payable buyer,
+            address payable seller,
+            address arbitrator,
+            uint256 amount,
+            EscrowContract.EscrowStatus status
+        ) = escrowContract.escrows(id);
+
+        assertEq(buyer, BUYER, "Buyer address not set correctly");
+        assertEq(seller, SELLER, "Seller address not set correctly");
+        assertEq(arbitrator, ARBITRATOR, "Arbitrator address not set correctly");
+        assertEq(amount, 1e18, "Value incorrectly saved");
+        assertEq(uint8(status), uint8(EscrowContract.EscrowStatus.Disputed), "Escrow status wrong");
+    }
+
+    function test_raiseDispute_fail_NotAuthorised() public {
+        vm.prank(BUYER);
+        uint256 id = escrowContract.createEscrow{value: 1e18}({seller: SELLER, arbitrator: ARBITRATOR});
+        vm.expectRevert(EscrowContract.EscrowContract__NotAuthorised.selector);
+        vm.prank(RANDOM);
+        escrowContract.raiseDispute(id);
+    }
+
+    function test_raiseDispute_fail_NotDisputable() public {
+        vm.prank(BUYER);
+        uint256 id = escrowContract.createEscrow{value: 1e18}({seller: SELLER, arbitrator: ARBITRATOR});
+        vm.prank(BUYER);
+        escrowContract.releaseFunds(id);
+        vm.expectRevert(EscrowContract.EscrowContract__NotDisputable.selector);
+        vm.prank(SELLER);
+        escrowContract.raiseDispute(id);
+
+        (
+            address payable buyer,
+            address payable seller,
+            address arbitrator,
+            uint256 amount,
+            EscrowContract.EscrowStatus status
+        ) = escrowContract.escrows(id);
+
+        assertEq(buyer, BUYER, "Buyer address not set correctly");
+        assertEq(seller, SELLER, "Seller address not set correctly");
+        assertEq(arbitrator, ARBITRATOR, "Arbitrator address not set correctly");
+        assertEq(amount, 1e18, "Value incorrectly saved");
+        assertEq(uint8(status), uint8(EscrowContract.EscrowStatus.Completed), "Escrow status wrong");
+    }
+
+    function test_event_raiseDispute_DisputeRaised() public {
+        vm.prank(BUYER);
+        uint256 id = escrowContract.createEscrow{value: 1e18}({seller: SELLER, arbitrator: ARBITRATOR});
+        vm.expectEmit(false, true, false, true);
+        vm.prank(SELLER);
+        emit EscrowContract.DisputeRaised(1);
+        escrowContract.raiseDispute(id);
+    }
 
     // TEST resolveDispute(uint256 escrowId, bool releaseToSeller) onlyArbitrator
     function test_resolveDispute_success() public {}
