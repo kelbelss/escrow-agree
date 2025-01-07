@@ -45,7 +45,7 @@ contract TestEscrowContract is Test {
         assertEq(buyer, BUYER, "Buyer address not set correctly");
         assertEq(seller, SELLER, "Seller address not set correctly");
         assertEq(arbitrator, ARBITRATOR, "Arbitrator address not set correctly");
-        assertEq(amount, 1 ether, "Value incorrectly saved");
+        assertEq(amount, 1e18, "Value incorrectly saved");
         assertEq(uint8(status), uint8(EscrowContract.EscrowStatus.Pending), "Escrow status wrong");
     }
 
@@ -58,7 +58,7 @@ contract TestEscrowContract is Test {
     function test_event_createEscrow_EscrowCreated() public {
         vm.expectEmit(false, true, true, true);
         vm.prank(BUYER);
-        emit EscrowContract.EscrowCreated(1, BUYER, SELLER, 1 ether);
+        emit EscrowContract.EscrowCreated(1, BUYER, SELLER, 1e18);
         escrowContract.createEscrow{value: 1e18}({seller: SELLER, arbitrator: ARBITRATOR});
     }
 
@@ -87,9 +87,31 @@ contract TestEscrowContract is Test {
         console.log("Seller balance after funds are released", address(SELLER).balance);
     }
 
-    function test_releaseFunds_fail_OnlyBuyerCanCall() public {}
-    function test_releaseFunds_fail_NotInAReleasableState() public {}
-    function test_event_releaseFunds_FundsReleased() public {}
+    function test_releaseFunds_fail_OnlyBuyerCanCall() public {
+        vm.prank(BUYER);
+        uint256 id = escrowContract.createEscrow{value: 1e18}({seller: SELLER, arbitrator: ARBITRATOR});
+        vm.expectRevert(EscrowContract.EscrowContract__OnlyBuyerCanCall.selector);
+        vm.prank(SELLER);
+        escrowContract.releaseFunds(id);
+    }
+
+    function test_releaseFunds_fail_NotInAReleasableState() public {
+        vm.prank(BUYER);
+        uint256 id = escrowContract.createEscrow{value: 1e18}({seller: SELLER, arbitrator: ARBITRATOR});
+        vm.prank(SELLER);
+        escrowContract.raiseDispute(id);
+        vm.expectRevert(EscrowContract.EscrowContract__NotInAReleasableState.selector);
+        vm.prank(BUYER);
+        escrowContract.releaseFunds(id);
+    }
+
+    function test_event_releaseFunds_FundsReleased() public {
+        vm.startPrank(BUYER);
+        uint256 id = escrowContract.createEscrow{value: 1e18}({seller: SELLER, arbitrator: ARBITRATOR});
+        vm.expectEmit(false, true, false, true);
+        emit EscrowContract.FundsReleased(1, SELLER);
+        escrowContract.releaseFunds(id);
+    }
 
     // TEST raiseDispute(uint256 escrowId) onlyParticipant
     function test_raiseDispute_success() public {}
