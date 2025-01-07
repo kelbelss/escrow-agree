@@ -41,10 +41,10 @@ contract EscrowContract {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
-    event EscrowCreated(uint256 escrowId, address buyer, address seller, uint256 amount);
-    event FundsReleased(uint256 escrowId, address recipient);
+    event EscrowCreated(uint256 escrowId, address indexed buyer, address indexed seller, uint256 amount);
+    event FundsReleased(uint256 escrowId, address indexed recipient);
     event DisputeRaised(uint256 escrowId);
-    event DisputeResolved(uint256 escrowId, address recipient);
+    event DisputeResolved(uint256 escrowId, address indexed recipient);
 
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
@@ -93,6 +93,7 @@ contract EscrowContract {
     /*//////////////////////////////////////////////////////////////
                                CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
+    // v2 arbitrator address
     constructor() {}
 
     /*//////////////////////////////////////////////////////////////
@@ -100,11 +101,11 @@ contract EscrowContract {
     //////////////////////////////////////////////////////////////*/
     function createEscrow(address payable seller, address arbitrator) external payable returns (uint256) {
         // require(msg.value > 0, "Amount being escrowed must be larger than 0");
-        if (msg.value < 0) {
+        if (msg.value <= 0) {
             revert EscrowContract__InsufficientAmount();
         }
-
-        uint256 escrowId = escrowCount++;
+        escrowCount++;
+        uint256 escrowId = escrowCount;
         escrows[escrowId] = Escrow({
             buyer: payable(msg.sender),
             seller: seller,
