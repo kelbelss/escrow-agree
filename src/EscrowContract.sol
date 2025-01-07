@@ -42,7 +42,7 @@ contract EscrowContract {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
     event EscrowCreated(uint256 escrowId, address indexed buyer, address indexed seller, uint256 amount);
-    event FundsReleased(uint256 escrowId, address indexed recipient);
+    event FundsReleased(uint256 escrowId, address indexed seller);
     event DisputeRaised(uint256 escrowId);
     event DisputeResolved(uint256 escrowId, address indexed recipient);
 
