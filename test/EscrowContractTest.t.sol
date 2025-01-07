@@ -25,11 +25,9 @@ contract TestEscrowContract is Test {
         deal(BUYER, 10e18);
     }
 
-    function test_buyer_funds() public {
+    function test_buyer_funds() public view {
         assertEq(address(BUYER).balance, 10e18);
     }
-
-    // fail/error, success, event - consider checking enum status changes
 
     // TEST CreateEscrow(address payable seller, address arbitrator)
     function test_createEscrow_success() public {
@@ -51,11 +49,44 @@ contract TestEscrowContract is Test {
         assertEq(uint8(status), uint8(EscrowContract.EscrowStatus.Pending), "Escrow status wrong");
     }
 
-    function test_createEscrow_fail_InsufficientAmount() public {}
-    function test_event_createEscrow_EscrowCreated() public {}
+    function test_createEscrow_fail_InsufficientAmount() public {
+        vm.prank(BUYER);
+        vm.expectRevert(EscrowContract.EscrowContract__InsufficientAmount.selector);
+        escrowContract.createEscrow{value: 0e18}({seller: SELLER, arbitrator: ARBITRATOR});
+    }
+
+    function test_event_createEscrow_EscrowCreated() public {
+        vm.expectEmit(false, true, true, true);
+        vm.prank(BUYER);
+        emit EscrowContract.EscrowCreated(1, BUYER, SELLER, 1 ether);
+        escrowContract.createEscrow{value: 1e18}({seller: SELLER, arbitrator: ARBITRATOR});
+    }
 
     // TEST releaseFunds(uint256 escrowId) onlyBuyer
-    function test_releaseFunds_success() public {}
+    function test_releaseFunds_success() public {
+        vm.startPrank(BUYER);
+        uint256 id = escrowContract.createEscrow{value: 1e18}({seller: SELLER, arbitrator: ARBITRATOR});
+
+        escrowContract.releaseFunds(id);
+
+        (
+            address payable buyer,
+            address payable seller,
+            address arbitrator,
+            uint256 amount,
+            EscrowContract.EscrowStatus status
+        ) = escrowContract.escrows(id);
+
+        assertEq(buyer, BUYER, "Buyer address not set correctly");
+        assertEq(seller, SELLER, "Seller address not set correctly");
+        assertEq(arbitrator, ARBITRATOR, "Arbitrator address not set correctly");
+        assertEq(amount, 1e18, "Value incorrectly saved");
+        assertEq(uint8(status), uint8(EscrowContract.EscrowStatus.Completed), "Escrow status wrong");
+
+        assertEq(address(SELLER).balance, 1e18);
+        console.log("Seller balance after funds are released", address(SELLER).balance);
+    }
+
     function test_releaseFunds_fail_OnlyBuyerCanCall() public {}
     function test_releaseFunds_fail_NotInAReleasableState() public {}
     function test_event_releaseFunds_FundsReleased() public {}
