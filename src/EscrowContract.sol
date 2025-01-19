@@ -71,10 +71,6 @@ contract EscrowContract {
 
     modifier onlyParticipant(uint256 escrowId) {
         Escrow memory escrow = escrows[escrowId];
-        // require(
-        //     msg.sender == escrow.buyer || msg.sender == escrow.seller || msg.sender == escrow.arbitrator,
-        //     "Not authorized"
-        // );
         if (msg.sender != escrow.buyer && msg.sender != escrow.seller && msg.sender != escrow.arbitrator) {
             revert EscrowContract__NotAuthorised();
         }
@@ -82,8 +78,6 @@ contract EscrowContract {
     }
 
     modifier onlyArbitrator(uint256 escrowId) {
-        // require(msg.sender == escrows[escrowId].arbitrator, "Only arbitrator can call this function");
-
         if (msg.sender != escrows[escrowId].arbitrator) {
             revert EscrowContract__OnlyArbitratorCanCall();
         }
@@ -100,7 +94,6 @@ contract EscrowContract {
                               MAIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
     function createEscrow(address payable seller, address arbitrator) external payable returns (uint256) {
-        // require(msg.value > 0, "Amount being escrowed must be larger than 0");
         if (msg.value <= 0) {
             revert EscrowContract__InsufficientAmount();
         }
@@ -120,7 +113,6 @@ contract EscrowContract {
 
     function releaseFunds(uint256 escrowId) external onlyBuyer(escrowId) {
         Escrow storage escrow = escrows[escrowId];
-        // require(escrow.status == EscrowStatus.Pending, "Escrow not in a releasable state");
 
         if (escrow.status != EscrowStatus.Pending) {
             revert EscrowContract__NotInAReleasableState();
@@ -134,7 +126,6 @@ contract EscrowContract {
 
     function raiseDispute(uint256 escrowId) external onlyParticipant(escrowId) {
         Escrow storage escrow = escrows[escrowId];
-        // require(escrow.status == EscrowStatus.Pending, "Escrow not disputable");
 
         if (escrow.status != EscrowStatus.Pending) {
             revert EscrowContract__NotDisputable();
@@ -147,7 +138,6 @@ contract EscrowContract {
 
     function resolveDispute(uint256 escrowId, bool releaseToSeller) external onlyArbitrator(escrowId) {
         Escrow storage escrow = escrows[escrowId];
-        // require(escrow.status == EscrowStatus.Disputed, "Escrow not in dispute");
 
         if (escrow.status != EscrowStatus.Disputed) {
             revert EscrowContract__NotInDispute();
@@ -163,4 +153,6 @@ contract EscrowContract {
             emit DisputeResolved(escrowId, escrow.buyer);
         }
     }
+
+    receive() external payable {}
 }
